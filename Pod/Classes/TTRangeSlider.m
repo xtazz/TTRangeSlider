@@ -265,7 +265,8 @@ static const CGFloat kLabelsFontSize = 12.0f;
     self.rightHandle.position= rightHandleCenter;
     
     //positioning for the dist slider line
-    self.sliderLineBetweenHandles.frame = CGRectMake(self.leftHandle.position.x, self.sliderLine.frame.origin.y, self.rightHandle.position.x-self.leftHandle.position.x, self.lineHeight);
+    CGFloat originX = self.disableRange ? 0 : self.leftHandle.position.x;
+    self.sliderLineBetweenHandles.frame = CGRectMake(originX, self.sliderLine.frame.origin.y, self.rightHandle.position.x-originX, self.lineHeight);
 }
 
 - (void)updateLabelPositions {
@@ -402,13 +403,17 @@ static const CGFloat kLabelsFontSize = 12.0f;
     //multiply that percentage by self.maxValue to get the new selected minimum value
     float selectedValue = percentage * (self.maxValue - self.minValue) + self.minValue;
 
+    bool valueChanged = false;
+
     if (self.leftHandleSelected)
     {
         if (selectedValue < self.selectedMaximum){
             self.selectedMinimum = selectedValue;
+            valueChanged = true;
         }
         else {
             self.selectedMinimum = self.selectedMaximum;
+            valueChanged = true;
         }
 
     }
@@ -416,13 +421,19 @@ static const CGFloat kLabelsFontSize = 12.0f;
     {
         if (selectedValue > self.selectedMinimum || (self.disableRange && selectedValue >= self.minValue)){ //don't let the dots cross over, (unless range is disabled, in which case just dont let the dot fall off the end of the screen)
             self.selectedMaximum = selectedValue;
+            valueChanged = true;
         }
         else {
             self.selectedMaximum = self.selectedMinimum;
+            valueChanged = true;
         }
     }
 
     //no need to refresh the view because it is done as a sideeffect of setting the property
+
+    if (valueChanged) {
+        [self sendActionsForControlEvents:UIControlEventValueChanged];
+    }
 
     return YES;
 }
@@ -502,6 +513,12 @@ static const CGFloat kLabelsFontSize = 12.0f;
     [CATransaction commit];
 }
 
+- (void)setEnabled:(BOOL)enabled {
+    [super setEnabled:enabled];
+    
+    self.alpha = enabled ? 1 : 0.3;
+}
+
 - (void)setDisableRange:(BOOL)disableRange {
     _disableRange = disableRange;
     if (_disableRange){
@@ -510,6 +527,8 @@ static const CGFloat kLabelsFontSize = 12.0f;
     } else {
         self.leftHandle.hidden = NO;
     }
+    
+    [self refresh];
 }
 
 - (NSNumberFormatter *)decimalNumberFormatter {
